@@ -1,4 +1,0 @@
-class Default:
-    """
-    Default value
-    """
