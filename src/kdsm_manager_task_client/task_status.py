@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class TaskStatus(Enum):
+class TaskStatus(str, Enum):
     DEPLOYED = "deployed"
     RUNNING = "running"
     ABORTED = "aborted"
