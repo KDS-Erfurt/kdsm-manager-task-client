@@ -1,5 +1,6 @@
 import json
 from typing import Literal, Any
+import threading
 
 from pydantic import BaseModel
 from requests import request
@@ -57,6 +58,9 @@ class Task:
         if self._settings.ssl_verify is None:
             raise ValueError(f"Task ssl_verify is not set!")
 
+        # lock
+        self._lock: threading.Lock = threading.Lock()
+
         # bearer_auth
         self._bearer_auth: BearerAuth = BearerAuth(task=self)
 
@@ -65,6 +69,9 @@ class Task:
 
         # groups
         self._groups: list[Group] = []
+
+        # local_abort
+        self._local_abort: bool = False
 
     def __str__(self):
         return (f"{self.__class__.__name__}("
@@ -153,9 +160,13 @@ class Task:
 
     @property
     def abort(self) -> bool:
-        return self.request(method="GET",
-                            url=self.api_url + "/task/abort",
-                            response_model=bool)
+        with self._lock:
+            return self._local_abort
+
+    @abort.setter
+    def abort(self, value: bool) -> None:
+        with self._lock:
+            self._local_abort = value
 
     def request(self,
                 method: Literal["GET", "POST", "PUT"],

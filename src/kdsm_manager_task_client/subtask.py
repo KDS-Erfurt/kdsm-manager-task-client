@@ -82,6 +82,9 @@ class Subtask(ABC):
         # ended
         self._stopped: bool = False
 
+        # local_abort
+        self._local_abort: bool = False
+
     def __str__(self):
         return (f"{self.__class__.__name__}("
                 f"name='{self.name}', "
@@ -207,6 +210,22 @@ class Subtask(ABC):
             self.logger.info(new_status_text)
 
     @property
+    def abort(self) -> bool:
+        if self.task.abort:
+            return self.task.abort
+        with self._lock:
+            if self._local_abort:
+                return self._local_abort
+        return self.task.request(method="GET",
+                                 url=self.task.api_url + f"/task/subtask/{self.name}/abort",
+                                 response_model=bool)
+
+    @abort.setter
+    def abort(self, value: bool) -> None:
+        with self._lock:
+            self._local_abort = value
+
+    @property
     def logger(self) -> Logger:
         if self._logger is not None:
             return self._logger
@@ -258,7 +277,7 @@ class Subtask(ABC):
                 self.current_step = self.steps
 
         # log last message
-        self.logger.debug("Subtask ended.")
+        self.logger.debug(f"Subtask ended with status '{final_status.value}'.")
 
         # close log handler
         self._log_handler.close()
