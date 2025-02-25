@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Literal, Any
 import threading
 
@@ -196,7 +197,7 @@ class Task:
                 detail += " - " + response_data
             elif type(response_data) is dict:
                 if "detail" in response_data:
-                    response_data_pretty = json.dumps(response_data["detail"], indent=4)
+                    response_data_pretty = json.dumps(response_data.get("detail"), indent=4)
                 else:
                     response_data_pretty = json.dumps(response_data, indent=4)
                 detail += " - " + response_data_pretty
@@ -253,13 +254,17 @@ class Task:
             group.start()
 
         # wait for groups
-        while True:
-            all_groups_finished = True
-            for group in self.groups:
-                if group.ended_at is None:
-                    all_groups_finished = False
+        try:
+            while True:
+                all_groups_finished = True
+                for group in self.groups:
+                    if group.ended_at is None:
+                        all_groups_finished = False
+                        break
+                if all_groups_finished:
                     break
-            if all_groups_finished:
-                break
+                time.sleep(0.001)
+        except KeyboardInterrupt:
+            self.abort = True
 
         self.logger.debug("Task ended.")
